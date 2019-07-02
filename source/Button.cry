@@ -1,0 +1,74 @@
+import Graphics2D;
+import Graphics2DText;
+import TwoCansAlpha4;
+
+const BUTTON_FONT_SIZE = 16;
+const BUTTON_BORDER = 1;
+
+class Button : UI {
+	static field font;
+
+	static constructor() {
+		Button.font = FontResource.fromSystem("Times New Roman").getRenderer().setColor(0, 0, 0).setSize(BUTTON_FONT_SIZE);
+	}
+
+	field image;
+	field clicked = false;
+	field hovered;
+	field clickHeld = false;
+
+	field hotkey = null;
+	field repeatable = false;
+
+	constructor(x, y, width, height, text)
+		: base(x, y, width, height)
+	{
+		this.image = Button.font.render(text);
+	}
+
+	function subupdate(inputManager, events) {
+		if (this.repeatable) {
+			for (e : events) {
+				switch (e.type) {
+					case EventType.MOUSE_RELEASE:
+						this.clickHeld = false;
+						break;
+					case EventType.MOUSE_PRESS:
+						if (inputManager.isMouseOver(this.x, this.y, this.width + 1, this.height)) {
+							this.clickHeld = true;
+						}
+						break;
+					default:
+						break;
+				}
+			}
+			if (this.hotkey != null && inputManager.isKeyPressed(this.hotkey)) {
+				this.clickHeld = true;
+			}
+			this.clicked = this.clickHeld;
+		} else {
+			this.clicked = inputManager.didMouseClickHere(this.x, this.y, this.width, this.height)
+				|| (this.hotkey != null && inputManager.isKeyPressedThisFrame(this.hotkey));
+		}
+		this.hovered = inputManager.isMouseOver(this.x, this.y, this.width, this.height);
+	}
+
+	function subdraw() {
+		// Draw border.
+		Graphics2D.Draw.rectangle(this.x, this.y, this.width, this.height, 0, 0, 0);
+
+		// Draw background.
+		color = this.hovered ? [212, 212, 212] : [160, 160, 160];
+		Graphics2D.Draw.rectangle
+			( this.x + BUTTON_BORDER, this.y + BUTTON_BORDER
+			, this.width - 2 * BUTTON_BORDER, this.height - 2 * BUTTON_BORDER
+			, color[0], color[1], color[2]
+			);
+
+		// Draw foreground.
+		this.image.draw
+			( this.x + (this.width - this.image.width) / 2
+			, this.y + (this.height - this.image.height) / 2
+			);
+	}
+}

@@ -1,0 +1,70 @@
+import Graphics2D;
+import Graphics2DText;
+import Math;
+
+class Label : UI {
+	static field font;
+
+	static constructor() {
+		Label.font = FontResource.fromSystem("Times New Roman").getRenderer().setColor(0, 0, 0);
+	}
+
+	field image;
+	field size;
+	field fgColor;
+	field bgColor;
+	field xBorder;
+	field yBorder;
+
+	field horizontalOffset = 0;
+	field verticalOffset = 0;
+
+	constructor
+		( x, y
+		, xBorder, yBorder
+		, text, size
+		, fgColor = [0, 0, 0]
+		, bgColor = [255, 255, 255, 0]
+		)
+		: base(x, y, xBorder, yBorder)
+	{
+		this.image = Label.font
+			.setSize(size)
+			.setColor(fgColor[0], fgColor[1], fgColor[2])
+			.render(text);
+		this.size = size;
+		this.fgColor = fgColor;
+		this.bgColor = bgColor;
+		this.xBorder = xBorder;
+		this.yBorder = yBorder;
+
+		this.width += this.image.width;
+		this.height += this.image.height;
+	}
+
+	function setText(text) {
+		this.image = Label.font
+			.setSize(this.size)
+			.setColor(this.fgColor[0], this.fgColor[1], this.fgColor[2])
+			.render(text);
+
+		this.width = this.xBorder + this.image.width;
+		this.height = this.yBorder + this.image.height;
+	}
+
+	function subupdate(inputManager, events) {}
+
+	function subdraw() {
+		offsetX = Math.floor(this.x + this.width * this.horizontalOffset);
+		offsetY = Math.floor(this.y + this.height * this.verticalOffset);
+		Graphics2D.Draw.rectangle
+			( offsetX, offsetY
+			, this.width, this.height
+			, this.bgColor[0], this.bgColor[1], this.bgColor[2], this.bgColor.length > 3 ? this.bgColor[3] : 0
+			);
+		this.image.draw
+			( offsetX + (this.width - this.image.width) / 2
+			, offsetY + (this.height - this.image.height) / 2
+			);
+	}
+}

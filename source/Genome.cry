@@ -1,0 +1,111 @@
+import Graphics2D;
+import Graphics2DText;
+import Math;
+import Random;
+
+const GENOME_MATCH_FONT_SIZE = 15;
+const GENOME_MATCH_PAD = 4;
+
+const DEFAULT_GENOME_SIZE = 12;
+const NUCLEOTIDE_HEIGHT = 28;
+const NUCLEOTIDE_WIDTH = 15;
+const NUCLEOTIDE_BORDER = 1;
+
+class Genome {
+	static field font;
+	static field nucleotideColors =
+		{ 'A': [100, 247, 63]
+		, 'C': [255, 230, 0]
+		, 'G': [215, 65, 60]
+		, 'T': [60, 136, 238]
+		};
+
+	static constructor() {
+		Genome.font = FontResource.fromSystem("Times New Roman").getRenderer().setColor(0, 0, 0).setSize(GENOME_MATCH_FONT_SIZE);
+	}
+
+	static function randomNucleotide() {
+		switch (Random.randomInt(0, 4)) {
+			case 0: return 'A';
+			case 2: return 'C';
+			case 3: return 'G';
+			case 1: return 'T';
+		}
+	}
+
+	field sequence;
+	field selected = false;
+
+	// If sequence is null, constructs a random sequence of default length.
+	constructor(sequence = null) {
+		if (sequence == null) {
+			this.sequence = "";
+			for (j = 0; j < DEFAULT_GENOME_SIZE; ++j) {
+				this.sequence += Genome.randomNucleotide();
+			}
+		} else {
+			this.sequence = sequence;
+		}
+	}
+
+	// Produces a new genome by recombination with other.
+	function breedWith(other) {
+		// Choose an interior index at which to perform the recombination.
+		recombinationIdx = Random.randomInt(1, Math.min(this.sequence.length, other.sequence.length));
+		// Splice parent sequences together.
+		return new Genome(this.sequence[:recombinationIdx] + other.sequence[recombinationIdx:]);
+	}
+
+	// Mutates each nucleotide to a random nucleotide with probability pMutation.
+	function mutate(pMutation) {
+		newSequence = "";
+		for (nucleotide : this.sequence) {
+			newSequence += Random.randomFloat() < pMutation
+				? Genome.randomNucleotide()
+				: nucleotide
+				;
+		}
+		this.sequence = newSequence;
+	}
+
+	// Draws the genome. If target is not null, unmatching nucleotides will be crossed out.
+	function draw(x, y, target = null) {
+		// Draw background.
+		Graphics2D.Draw.rectangle
+			( x, y
+			, NUCLEOTIDE_WIDTH * this.sequence.length + NUCLEOTIDE_BORDER, NUCLEOTIDE_HEIGHT
+			, 0, 0, 0
+			);
+		// Draw nucleotides.
+		matches = 0;
+		for (i = 0; i < this.sequence.length; ++i) {
+			color = Genome.nucleotideColors[this.sequence[i]].clone();
+			if (!this.selected) {
+				color[0] *= 0.65;
+				color[1] *= 0.65;
+				color[2] *= 0.65;
+			}
+			nX = x + i * NUCLEOTIDE_WIDTH + NUCLEOTIDE_BORDER;
+			nY = y + NUCLEOTIDE_BORDER;
+			nWidth = NUCLEOTIDE_WIDTH - NUCLEOTIDE_BORDER;
+			nHeight = NUCLEOTIDE_HEIGHT - 2 * NUCLEOTIDE_BORDER;
+			Graphics2D.Draw.rectangle
+				( nX, nY
+				, nWidth, nHeight
+				, color[0], color[1], color[2]
+				);
+			if (target != null) {
+				if (this.sequence[i] != target.sequence[i]) {
+					// This locus does not match the target.
+					Graphics2D.Draw.line(nX, nY, nX + nWidth, nY + nHeight, 1, 0, 0, 0);
+					Graphics2D.Draw.line(nX + nWidth, nY, nX, nY + nHeight, 1, 0, 0, 0);
+				} else {
+					++matches;
+				}
+			}
+		}
+		if (target != null) {
+			Genome.font.render(matches).draw(x + NUCLEOTIDE_WIDTH * this.sequence.length + GENOME_MATCH_PAD, y);
+		}
+	}
+}

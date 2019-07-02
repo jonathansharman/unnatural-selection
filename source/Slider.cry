@@ -1,0 +1,92 @@
+import Graphics2D;
+import TwoCansAlpha4;
+
+const SLIDER_BORDER = 3;
+const SLIDER_DELTA = 0.0125;
+
+class Slider : UI {
+	field value;
+	field maxValue;
+	field color;
+	field selected = false;
+
+	field minHotkey = null;
+	field maxHotkey = null;
+	field lessHotkey = null;
+	field moreHotkey = null;
+
+	constructor(value, maxValue, x, y, width, height, color)
+		: base(x, y, width, height)
+	{
+		this.value = value;
+		this.maxValue = maxValue;
+		this.color = color;
+	}
+
+	function subupdate(inputManager, events) {
+		for (e : events) {
+			switch (e.type) {
+				case EventType.MOUSE_RELEASE:
+					this.selected = false;
+					break;
+				case EventType.MOUSE_PRESS:
+					if (inputManager.isMouseOver(this.x, this.y, this.width + 1, this.height)) {
+						this.selected = true;
+					}
+					break;
+				default:
+					break;
+			}
+		}
+
+		if (this.selected) {
+			mousePos = inputManager.getMousePosition();
+			this.value = this.maxValue * (mousePos[0] - this.x) / this.width;
+		}
+		if (this.minHotkey != null && inputManager.isKeyPressed(this.minHotkey)) {
+			this.value = 0;
+		} else if (this.maxHotkey != null && inputManager.isKeyPressed(this.maxHotkey)) {
+			this.value = this.maxValue;
+		} else if (this.lessHotkey != null && inputManager.isKeyPressed(this.lessHotkey)) {
+			this.value -= SLIDER_DELTA * this.maxValue;
+		} else if (this.moreHotkey != null && inputManager.isKeyPressed(this.moreHotkey)) {
+			this.value += SLIDER_DELTA * this.maxValue;
+		}
+		this.value = this.value < 0 ? 0 : this.value > this.maxValue ? this.maxValue : this.value;
+	}
+
+	// Increments the slider by a fixed percentage delta.
+	function increment() {
+		this.value += SLIDER_DELTA * this.maxValue;
+		this.value = this.value < 0 ? 0 : this.value > this.maxValue ? this.maxValue : this.value;
+	}
+
+	// Decrements the slider by a fixed percentage delta.
+	function decrement() {
+		this.value -= SLIDER_DELTA * this.maxValue;
+		this.value = this.value < 0 ? 0 : this.value > this.maxValue ? this.maxValue : this.value;
+	}
+
+	// Set the slider's value, respecting its bounds.
+	function setValue(value) {
+		this.value = value < 0 ? 0 : value > this.maxValue ? this.maxValue : value;
+	}
+
+	// Draws the slider.
+	function subdraw() {
+		// Draw background.
+		Graphics2D.Draw.rectangle
+			( this.x - SLIDER_BORDER
+			, this.y - SLIDER_BORDER
+			, this.width + 2 * SLIDER_BORDER
+			, this.height + 2 * SLIDER_BORDER
+			, 0, 0, 0);
+
+		// Draw foreground.
+		Graphics2D.Draw.rectangle
+			( this.x, this.y
+			, this.width * this.value / this.maxValue, this.height
+			, this.color[0], this.color[1], this.color[2]
+			);
+	}
+}

@@ -1,0 +1,64 @@
+import Graphics2D;
+import Graphics2DText;
+
+const TOGGLE_FONT_SIZE = 16;
+const TOGGLE_BORDER = 1;
+
+class Toggle : UI {
+	static field font;
+	static field checkImage;
+	static field crossImage;
+
+	static constructor() {
+		Toggle.font = FontResource.fromSystem("Times New Roman").getRenderer().setColor(0, 0, 0).setSize(TOGGLE_FONT_SIZE);
+		Toggle.checkImage = Toggle.font.render("✅ ");
+		Toggle.crossImage = Toggle.font.render("❌ ");
+	}
+
+	field image;
+	field clicked = false;
+	field on = false;
+	field hovered;
+
+	field hotkey = null;
+
+	constructor(x, y, width, height, text)
+		: base(x, y, width, height)
+	{
+		this.image = Toggle.font.render(text);
+	}
+
+	function subupdate(inputManager, events) {
+		this.clicked = inputManager.didMouseClickHere(this.x, this.y, this.width, this.height)
+			|| (this.hotkey != null && inputManager.isKeyPressedThisFrame(this.hotkey));
+		if (this.clicked) {
+			this.on = !this.on;
+		}
+		this.hovered = inputManager.isMouseOver(this.x, this.y, this.width, this.height);
+	}
+
+	function subdraw() {
+		// Draw border.
+		Graphics2D.Draw.rectangle(this.x, this.y, this.width, this.height, 0, 0, 0);
+
+		// Draw background.
+		color = this.hovered ? [212, 212, 212] : [160, 160, 160];
+		Graphics2D.Draw.rectangle
+			( this.x + TOGGLE_BORDER, this.y + TOGGLE_BORDER
+			, this.width - 2 * TOGGLE_BORDER, this.height - 2 * TOGGLE_BORDER
+			, color[0], color[1], color[2]
+			);
+
+		// Draw foreground.
+		sign = this.on ? Toggle.checkImage : Toggle.crossImage;
+		left = this.x + (this.width - this.image.width - sign.width) / 2;
+		sign.draw
+			( left
+			, this.y + (this.height - sign.height) / 2
+			);
+		this.image.draw
+			( left + sign.width
+			, this.y + (this.height - this.image.height) / 2
+			);
+	}
+}

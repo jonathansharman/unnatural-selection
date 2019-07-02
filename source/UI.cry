@@ -1,0 +1,41 @@
+class UI {
+	field x;
+	field y;
+	field width;
+	field height;
+	field enabled = true;
+	field visible = true;
+
+	constructor(x, y, width, height) {
+		this.x = x;
+		this.y = y;
+		this.width = width;
+		this.height = height;
+	}
+
+	// Updates the UI element. Call in Scene.update().
+	// inputManager: The inputManager passed to Scene.update().
+	// events: The event list passed to Scene.update().
+	function update(inputManager, events) {
+		if (this.enabled) {
+			this.subupdate(inputManager, events);
+		}
+	}
+
+	// Draws the UI element. Call in Scene.render().
+	function draw() {
+		if (this.visible) {
+			this.subdraw();
+		}
+	}
+
+	// Update method to be overridden in derived class.
+	function subupdate(inputManager, events) {
+		throw new Exception("Abstract method not overridden!");
+	}
+
+	// Draw method to be overridden in derived class.
+	function subdraw() {
+		throw new Exception("Abstract method not overridden!");
+	}
+}

@@ -1,0 +1,352 @@
+import Graphics2D;
+import Graphics2DText;
+import Math;
+import TwoCansAlpha4;
+
+// Gameplay
+
+const POPULATION_SIZE = 18;
+const INITIAL_P_MUTATION = 0.0125;
+const MAX_P_MUTATION = 0.05;
+
+// UI
+
+const X_RES = 640;
+const Y_RES = 480;
+
+const UI_LEFT = 12;
+
+const COLUMN_COUNT = 3;
+
+const GENOME_WIDTH = NUCLEOTIDE_WIDTH * DEFAULT_GENOME_SIZE;
+const GENOME_Y_START = 32;
+const GENOME_X_PAD = (X_RES - 3 * GENOME_WIDTH - UI_LEFT) / 3;
+const GENOME_Y_PAD = 12;
+
+const TARGET_Y = 300;
+
+const DFLT_SELECT_BUTTON_WIDTH = 160;
+const BREED_BUTTON_WIDTH = 110;
+const GUIDE_TOGGLE_WIDTH = 110;
+
+const BUTTON_HEIGHT = 48;
+const BUTTON_Y = 355;
+const BUTTON_PAD = 20;
+const BUTTONS_WIDTH = DFLT_SELECT_BUTTON_WIDTH + BREED_BUTTON_WIDTH + GUIDE_TOGGLE_WIDTH + 2 * BUTTON_PAD;
+
+const DFLT_SELECT_BUTTON_X = (X_RES - BUTTONS_WIDTH) / 2;
+const BREED_BUTTON_X = DFLT_SELECT_BUTTON_X + DFLT_SELECT_BUTTON_WIDTH + BUTTON_PAD;
+const GUIDE_TOGGLE_X = BREED_BUTTON_X + BREED_BUTTON_WIDTH + BUTTON_PAD;
+
+const RADIATION_BUTTON_WIDTH = 60;
+
+const MIN_RADIATION_BUTTON_X = 0;
+const MIN_RADIATION_BUTTON_Y = Y_RES - BUTTON_HEIGHT;
+
+const MAX_RADIATION_BUTTON_X = X_RES - RADIATION_BUTTON_WIDTH;
+const MAX_RADIATION_BUTTON_Y = Y_RES - BUTTON_HEIGHT;
+
+const LESS_RADIATION_BUTTON_X = RADIATION_BUTTON_WIDTH;
+const LESS_RADIATION_BUTTON_Y = Y_RES - BUTTON_HEIGHT;
+
+const MORE_RADIATION_BUTTON_X = X_RES - 2 * RADIATION_BUTTON_WIDTH;
+const MORE_RADIATION_BUTTON_Y = Y_RES - BUTTON_HEIGHT;
+
+const RADIATION_SLIDER_X = SLIDER_BORDER + 2 * RADIATION_BUTTON_WIDTH;
+const RADIATION_SLIDER_WIDTH = X_RES - 2 * SLIDER_BORDER - 4 * RADIATION_BUTTON_WIDTH;
+const RADIATION_SLIDER_HEIGHT = 25;
+const RADIATION_SLIDER_Y = Y_RES - RADIATION_SLIDER_HEIGHT - SLIDER_BORDER;
+
+class MainScene : AbstractScene {
+	field generation = 0;
+	field population;
+	field target;
+	field success;
+
+	field visited;
+	field mouseDown = false;
+
+	// UI
+
+	field uiElements;
+
+	field breedButton;
+	field showGuideToggle;
+	field dfltSelectToggle;
+
+	field minRadiationButton;
+	field maxRadiationButton;
+	field lessRadiationButton;
+	field moreRadiationButton;
+
+	field radiationSlider;
+
+	field genLabel;
+	field targetLabel;
+	field radiationLabel;
+	field victoryLabel;
+
+	function reset() {
+		this.success = false;
+		this.visited = [false] * POPULATION_SIZE;
+		this.radiationSlider.value = INITIAL_P_MUTATION;
+		this.showGuideToggle.on = false;
+		this.victoryLabel.visible = false;
+
+		for (element : this.uiElements) {
+			element.enabled = true;
+		}
+
+		// Pick a random target genome.
+		this.target = new Genome();
+		this.target.selected = true;
+
+		// Randomize population.
+		this.population = [];
+		for (i = 0; i < POPULATION_SIZE; ++i) {
+			this.population.add(new Genome());
+		}
+	}
+
+	constructor() : base() {
+		// Create UI.
+
+		this.uiElements = [];
+
+		this.dfltSelectToggle = new Toggle
+			( DFLT_SELECT_BUTTON_X, BUTTON_Y
+			, DFLT_SELECT_BUTTON_WIDTH, BUTTON_HEIGHT
+			, "Dflt. Select"
+			);
+		this.dfltSelectToggle.hotkey = KeyboardKey.S;
+		this.uiElements.add(this.dfltSelectToggle);
+
+		this.breedButton = new Button
+			( BREED_BUTTON_X, BUTTON_Y
+			, BREED_BUTTON_WIDTH, BUTTON_HEIGHT
+			, "Breed"
+			);
+		this.breedButton.hotkey = KeyboardKey.SPACE;
+		this.uiElements.add(this.breedButton);
+
+		this.showGuideToggle = new Toggle
+			( GUIDE_TOGGLE_X, BUTTON_Y
+			, GUIDE_TOGGLE_WIDTH, BUTTON_HEIGHT
+			, "Guide"
+			);
+		this.showGuideToggle.hotkey = KeyboardKey.G;
+		this.uiElements.add(this.showGuideToggle);
+
+		this.minRadiationButton = new Button
+			( MIN_RADIATION_BUTTON_X, MIN_RADIATION_BUTTON_Y
+			, RADIATION_BUTTON_WIDTH, BUTTON_HEIGHT
+			, "<<"
+			);
+		this.uiElements.add(this.minRadiationButton);
+
+		this.maxRadiationButton = new Button
+			( MAX_RADIATION_BUTTON_X, MAX_RADIATION_BUTTON_Y
+			, RADIATION_BUTTON_WIDTH, BUTTON_HEIGHT
+			, ">>"
+			);
+		this.uiElements.add(this.maxRadiationButton);
+
+		this.lessRadiationButton = new Button
+			( LESS_RADIATION_BUTTON_X, LESS_RADIATION_BUTTON_Y
+			, RADIATION_BUTTON_WIDTH, BUTTON_HEIGHT
+			, "<"
+			);
+		this.lessRadiationButton.repeatable = true;
+		this.uiElements.add(this.lessRadiationButton);
+
+		this.moreRadiationButton = new Button
+			( MORE_RADIATION_BUTTON_X, MORE_RADIATION_BUTTON_Y
+			, RADIATION_BUTTON_WIDTH, BUTTON_HEIGHT
+			, ">"
+			);
+		this.moreRadiationButton.repeatable = true;
+		this.uiElements.add(this.moreRadiationButton);
+
+		this.radiationSlider = new Slider
+			( INITIAL_P_MUTATION, MAX_P_MUTATION
+			, RADIATION_SLIDER_X, RADIATION_SLIDER_Y
+			, RADIATION_SLIDER_WIDTH, RADIATION_SLIDER_HEIGHT
+			, [160, 0, 255]
+			);
+		this.radiationSlider.minHotkey = KeyboardKey.Q;
+		this.radiationSlider.maxHotkey = KeyboardKey.R;
+		this.radiationSlider.lessHotkey = KeyboardKey.W;
+		this.radiationSlider.moreHotkey = KeyboardKey.E;
+		this.uiElements.add(this.radiationSlider);
+
+		this.genLabel = new Label(UI_LEFT, 0, 0, 0, "Generation: 0", 16);
+		this.uiElements.add(this.genLabel);
+
+		this.targetLabel = new Label(UI_LEFT, TARGET_Y, 0, 0, "Target Genome", 16);
+		this.targetLabel.verticalOffset = -1;
+		this.uiElements.add(this.targetLabel);
+
+		this.radiationLabel = new Label
+			( X_RES / 2, RADIATION_SLIDER_Y
+			, 0, 0
+			, "Radiation", 16
+			);
+		this.radiationLabel.horizontalOffset = -0.5;
+		this.radiationLabel.verticalOffset = -1;
+		this.uiElements.add(this.radiationLabel);
+
+		this.victoryLabel = new Label
+			( X_RES / 2, Y_RES / 3
+			, 0, 0
+			, " Victory! Click to restart... ", 32
+			, [0, 0, 0]
+			, [255, 255, 255, 192]
+			);
+		this.victoryLabel.horizontalOffset = -0.5;
+		this.victoryLabel.verticalOffset = -0.5;
+		this.uiElements.add(this.victoryLabel);
+
+		this.reset();
+	}
+
+	function update(inputManager, events) {
+		// Allow reset if successful.
+		if (this.success && inputManager.didMouseClickHere(0, 0, X_RES, Y_RES)) {
+			this.reset();
+			return;
+		}
+
+		for (e : events) {
+			switch (e.type) {
+				case EventType.MOUSE_RELEASE:
+					this.visited = [false] * POPULATION_SIZE;
+					this.mouseDown = false;
+					break;
+				case EventType.MOUSE_PRESS:
+					this.mouseDown = true;
+					break;
+				default:
+					break;
+			}
+		}
+
+		// Update UI uiElements.
+		for (element : this.uiElements) {
+			element.update(inputManager, events);
+		}
+
+		// Radiation buttons.
+		if (this.minRadiationButton.clicked) {
+			this.radiationSlider.setValue(0);
+		} else if (this.maxRadiationButton.clicked) {
+			this.radiationSlider.setValue(this.radiationSlider.maxValue);
+		} else if (this.lessRadiationButton.clicked) {
+			this.radiationSlider.decrement();
+		} else if (this.moreRadiationButton.clicked) {
+			this.radiationSlider.increment();
+		}
+
+		// Genome selection.
+		x = UI_LEFT;
+		y = GENOME_Y_START;
+		for (i = 0; i < this.population.length; ++i) {
+			visitGenome = !this.visited[i] && this.mouseDown && inputManager.isMouseOver
+				( x - GENOME_X_PAD / 2, y - GENOME_Y_PAD / 2
+				, GENOME_WIDTH + GENOME_X_PAD, NUCLEOTIDE_HEIGHT + GENOME_Y_PAD
+				);
+			if (visitGenome) {
+				this.visited[i] = true;
+				this.population[i].selected = !this.population[i].selected;
+			}
+			y += NUCLEOTIDE_HEIGHT + GENOME_Y_PAD;
+			if ((i + 1) % (POPULATION_SIZE / COLUMN_COUNT) == 0) {
+				y = GENOME_Y_START;
+				x += GENOME_WIDTH + GENOME_X_PAD;
+			}
+		}
+
+		// Immediately toggle selections when Dflt. Select toggle is clicked.
+		if (this.dfltSelectToggle.clicked) {
+			// Set default selection.
+			for (genome : this.population) {
+				genome.selected = this.dfltSelectToggle.on;
+			}
+		}
+
+		if (!this.success && this.breedButton.clicked) {
+			// Create new generation.
+			++this.generation;
+			this.genLabel.setText("Generation: " + this.generation);
+
+			// Build parents list.
+			parents = [];
+			for (i = 0; i < POPULATION_SIZE; ++i) {
+				parents.add(i);
+				if (this.population[i].selected) {
+					// Selected genomes have double representation in the list.
+					parents.add(i);
+				}
+			}
+
+			// Breed.
+			newPopulation = [];
+			for (i = 0; i < POPULATION_SIZE; ++i) {
+				firstIdx = parents.choice();
+				secondIdx = parents.choice();
+				// Ensure parents are different individuals.
+				while (firstIdx == secondIdx) {
+					secondIdx = parents.choice();
+				}
+				newPopulation.add(this.population[firstIdx].breedWith(this.population[secondIdx]));
+			}
+			this.population = newPopulation;
+			// Mutate and check for success.
+			this.success = true;
+			for (genome : this.population) {
+				genome.mutate(this.radiationSlider.value);
+				if (this.success && genome.sequence != this.target.sequence) {
+					this.success = false;
+				}
+			}
+			if (this.success) {
+				this.victoryLabel.visible = true;
+				for (element : this.uiElements) {
+					element.enabled = false;
+				}
+			} else if (this.dfltSelectToggle.on) {
+				// Set default selection.
+				for (genome : this.population) {
+					genome.selected = true;
+				}
+			}
+		}
+	}
+
+	function render() {
+		Graphics2D.Draw.fill(192, 192, 192);
+
+		// Draw population.
+		x = UI_LEFT;
+		y = GENOME_Y_START;
+		for (i = 0; i < this.population.length; ++i) {
+			this.population[i].draw(x, y, this.showGuideToggle.on ? this.target : null);
+			y += NUCLEOTIDE_HEIGHT + GENOME_Y_PAD;
+			if ((i + 1) % (POPULATION_SIZE / COLUMN_COUNT) == 0) {
+				y = GENOME_Y_START;
+				x += GENOME_WIDTH + GENOME_X_PAD;
+			}
+		}
+
+		// Draw target genome.
+		x = UI_LEFT;
+		for (i = 0; i < COLUMN_COUNT; ++i) {
+			this.target.draw(x, TARGET_Y);
+			x += GENOME_WIDTH + GENOME_X_PAD;
+		}
+
+		// Draw UI uiElements.
+		for (element : this.uiElements) {
+			element.draw();
+		}
+	}
+}
