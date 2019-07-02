@@ -58,7 +58,7 @@ const RADIATION_SLIDER_HEIGHT = 25;
 const RADIATION_SLIDER_Y = Y_RES - RADIATION_SLIDER_HEIGHT - SLIDER_BORDER;
 
 class MainScene : AbstractScene {
-	field generation = 0;
+	field generation;
 	field population;
 	field target;
 	field success;
@@ -87,6 +87,8 @@ class MainScene : AbstractScene {
 	field victoryLabel;
 
 	function reset() {
+		this.generation = 0;
+		this.genLabel.setText("Generation: 0");
 		this.success = false;
 		this.visited = [false] * POPULATION_SIZE;
 		this.radiationSlider.value = INITIAL_P_MUTATION;
