@@ -4,6 +4,6 @@ Try to make every genome in the population match the target genome. Press the "B
 
 Shortcuts:
 - Space: breed
-- A/S: Select None / Select ALL
-- D: Show/hide guide
+- S: Change the default selection
+- G: Show/hide guide
 - Q/W/E/R: Min / less / more / max radiation
